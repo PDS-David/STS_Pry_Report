@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Student - SOW THE SEED</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 30px auto;
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        h2 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 28px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+        
+        input[type="text"],
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: all 0.3s ease;
+        }
+        
+        input:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+            width: 100%;
+        }
+        
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+        
+        .btn-secondary {
+            background: #718096;
+            color: white;
+            margin-right: 10px;
+        }
+        
+        .btn-secondary:hover {
+            background: #4a5568;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>✏️ Edit Student</h2>
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div style="background: {% if category == 'error' %}#fee{% else %}#d4edda{% endif %}; 
+                                padding: 12px; 
+                                border-radius: 8px; 
+                                margin-bottom: 20px;
+                                border-left: 4px solid {% if category == 'error' %}#c33{% else %}#48bb78{% endif %};">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <form method="POST">
+            <div class="form-group">
+                <label for="name">Student Full Name *</label>
+                <input type="text" 
+                       id="name" 
+                       name="name" 
+                       value="{{ student.name }}"
+                       required>
+            </div>
+            
+            <div class="form-group">
+                <label for="admission_number">Admission Number *</label>
+                <input type="text" 
+                       id="admission_number" 
+                       name="admission_number" 
+                       value="{{ student.admission_number }}"
+                       required>
+            </div>
+            
+            <div class="form-group">
+                <label for="student_class">Class *</label>
+                <select id="student_class" name="student_class" required>
+                    <option value="">-- Select Class --</option>
+                    <option value="JSS1" {% if student.student_class == 'JSS1' %}selected{% endif %}>JSS1</option>
+                    <option value="JSS2" {% if student.student_class == 'JSS2' %}selected{% endif %}>JSS2</option>
+                    <option value="JSS3" {% if student.student_class == 'JSS3' %}selected{% endif %}>JSS3</option>
+                    <option value="SS1" {% if student.student_class == 'SS1' %}selected{% endif %}>SS1</option>
+                    <option value="SS2" {% if student.student_class == 'SS2' %}selected{% endif %}>SS2</option>
+                    <option value="SS3" {% if student.student_class == 'SS3' %}selected{% endif %}>SS3</option>
+                </select>
+            </div>
+            
+            <div class="button-group">
+                <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">← Back</a>
+                <button type="submit" class="btn btn-primary" style="flex: 1;">Update Student</button>
+            </div>
+        </form>
+    </div>
+</body>
+</html>

@@ -1,0 +1,20 @@
+url 
+
+https://ccwmwwjpqppecrxnbmeb.supabase.co
+
+
+Anon Key
+
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNjd213d2pwcXBwZWNyeG5ibWViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ2MjE2MDEsImV4cCI6MjA4MDE5NzYwMX0.Q2LFUwQaqsdCOzWtjM_jWhfyalJGkfvMW7taoPFlJuw
+
+
+Publishable key
+
+sb_publishable_1j5Qj3MCRN5HqgZ3EN0Zpg_ijTT-vwC
+
+
+API Key
+
+sb_secret_MS1bSW9oQ3kYhwtq4HUanA_bDrJlPac
+
+

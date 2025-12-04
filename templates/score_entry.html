@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Score Entry</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px; }
+        .container { max-width: 700px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; }
+        h2 { color: #333; margin-bottom: 20px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, select, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+        button { padding: 12px 24px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #5568d3; }
+        .back-btn { background: #666; margin-right: 10px; }
+        .info { background: #e6f7ff; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>📝 Score Entry</h2>
+        
+        {% if current_term %}
+        <div class="info">
+            <strong>Current Term:</strong> {{ current_term.name }} ({{ current_term.academic_year }})
+        </div>
+        {% endif %}
+        
+        <form method="POST">
+            <div class="form-group">
+                <label>Student:</label>
+                <select name="student_id" required>
+                    <option value="">-- Select Student --</option>
+                    {% for student in students %}
+                    <option value="{{ student.id }}">{{ student.name }} ({{ student.student_class }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Subject:</label>
+                <select name="subject_id" required>
+                    <option value="">-- Select Subject --</option>
+                    {% for subject in subjects %}
+                    <option value="{{ subject.id }}">{{ subject.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>CA1 (Max: 15):</label>
+                <input type="number" name="ca1" min="0" max="15" step="0.01" required>
+            </div>
+            
+            <div class="form-group">
+                <label>CA2 (Max: 15):</label>
+                <input type="number" name="ca2" min="0" max="15" step="0.01" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Exam (Max: 70):</label>
+                <input type="number" name="exam" min="0" max="70" step="0.01" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Teacher's Remark (Optional):</label>
+                <textarea name="remark" rows="3" placeholder="Enter your remark here..."></textarea>
+            </div>
+            
+            <a href="/dashboard"><button type="button" class="back-btn">← Back</button></a>
+            <button type="submit">Save Score</button>
+        </form>
+    </div>
+</body>
+</html>

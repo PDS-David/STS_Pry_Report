@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Score Entry – STSS</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f2f2f2;
+            padding: 20px;
+        }
+        h2 {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        .card {
+            background: white;
+            padding: 20px;
+            max-width: 600px;
+            margin: auto;
+            border-radius: 8px;
+            box-shadow: 0 0 10px #0002;
+        }
+        label {
+            font-weight: bold;
+        }
+        select, input {
+            width: 100%;
+            padding: 10px;
+            margin: 6px 0 15px 0;
+            border-radius: 5px;
+            border: 1px solid #bbb;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #0066cc;
+            color: white;
+            border: none;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        button:hover { background: #004c99; }
+
+        .msg {
+            padding: 12px;
+            margin-top: 10px;
+            text-align: center;
+            border-radius: 5px;
+            display: none;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+
+<h2>STSS – Score Entry</h2>
+
+<div class="card">
+
+    <label>Student:</label>
+    <select id="studentSelect">
+        <option value="">Loading...</option>
+    </select>
+
+    <label>Subject:</label>
+    <select id="subjectSelect">
+        <option value="">Loading...</option>
+    </select>
+
+    <label>Term:</label>
+    <select id="termSelect">
+        <option value="">Loading...</option>
+    </select>
+
+    <label>CA1 (10 marks):</label>
+    <input type="number" id="ca1" min="0" max="10" placeholder="Enter CA1 score">
+
+    <label>CA2 (10 marks):</label>
+    <input type="number" id="ca2" min="0" max="10" placeholder="Enter CA2 score">
+
+    <label>Exam (80 marks):</label>
+    <input type="number" id="exam" min="0" max="80" placeholder="Enter exam score">
+
+    <label>Total:</label>
+    <input type="text" id="total" disabled placeholder="Total auto-calculates">
+
+    <button onclick="submitScore()">Submit Score</button>
+
+    <div id="message" class="msg"></div>
+</div>
+
+<script>
+    const API = ""; // Use relative path
+
+    window.onload = function () {
+        loadStudents();
+        loadSubjects();
+        loadTerms();
+
+        document.getElementById("ca1").addEventListener("input", updateTotal);
+        document.getElementById("ca2").addEventListener("input", updateTotal);
+        document.getElementById("exam").addEventListener("input", updateTota
