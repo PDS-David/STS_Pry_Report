@@ -5,11 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - {{ school_info.name }}</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -30,23 +26,14 @@
             width: 100%;
             animation: slideUp 0.5s ease;
         }
-        
+
         @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-        
-        .logo-container {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        
+
+        .logo-container { text-align: center; margin-bottom: 30px; }
+
         .logo-img {
             width: 100px;
             height: 100px;
@@ -55,20 +42,14 @@
             border-radius: 50%;
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         }
-        
+
         .logo-container h1 {
             font-size: 22px;
             color: #333;
             margin-bottom: 5px;
             line-height: 1.4;
         }
-        
-        .logo-container p {
-            color: #666;
-            font-size: 13px;
-            margin-top: 10px;
-        }
-        
+
         .contact-info {
             background: #f7fafc;
             padding: 12px;
@@ -77,87 +58,54 @@
             text-align: center;
             font-size: 13px;
         }
-        
-        .contact-info p {
-            margin: 5px 0;
-            color: #555;
-        }
-        
-        .contact-info strong {
-            color: #333;
-        }
-        
-        .form-group {
-            margin-bottom: 20px;
-        }
-        
-        label {
-            display: block;
-            margin-bottom: 8px;
-            color: #333;
-            font-weight: 500;
-            font-size: 14px;
-        }
-        
-        input[type="text"],
-        input[type="password"] {
-            width: 100%;
-            padding: 12px 15px;
+
+        .contact-info p { margin: 5px 0; color: #555; }
+        .contact-info strong { color: #333; }
+
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; color: #333; font-weight: 500; }
+
+        input[type="text"], input[type="password"] {
+            width: 100%; padding: 12px 15px;
             border: 2px solid #e2e8f0;
             border-radius: 10px;
-            font-size: 15px;
-            transition: all 0.3s ease;
             background: #f7fafc;
+            font-size: 15px;
+            transition: .3s;
         }
-        
-        input[type="text"]:focus,
-        input[type="password"]:focus {
+
+        input:focus {
             outline: none;
             border-color: #667eea;
             background: white;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
         }
-        
+
         .btn-login {
-            width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
+            width: 100%; padding: 14px;
+            background: linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+            color: white; border: none;
             border-radius: 10px;
-            font-size: 16px;
-            font-weight: 600;
+            font-size: 16px; font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s ease;
             margin-top: 10px;
+            transition: .3s;
         }
-        
+
         .btn-login:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 10px 25px rgba(102,126,234,0.4);
         }
-        
-        .btn-login:active {
-            transform: translateY(0);
-        }
-        
+
         .error {
             background: #fee;
             color: #c33;
             padding: 12px 15px;
             border-radius: 10px;
             margin-bottom: 20px;
-            font-size: 14px;
             border-left: 4px solid #c33;
-            animation: shake 0.5s ease;
         }
-        
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-10px); }
-            75% { transform: translateX(10px); }
-        }
-        
+
         .info-box {
             background: #e6f7ff;
             border: 1px solid #91d5ff;
@@ -167,116 +115,61 @@
             font-size: 13px;
             color: #0050b3;
         }
-        
-        .info-box strong {
-            display: block;
-            margin-bottom: 8px;
-            color: #003a8c;
-        }
-        
-        .info-box p {
-            margin: 5px 0;
-        }
-        
+
         .footer {
             text-align: center;
             margin-top: 25px;
-            padding-top: 20px;
-            border-top: 1px solid #e2e8f0;
             color: #666;
             font-size: 12px;
         }
-        
-        .footer p {
-            margin: 5px 0;
-        }
-        
-        @media (max-width: 480px) {
-            .login-container {
-                padding: 30px 20px;
-            }
-            
-            .logo-container h1 {
-                font-size: 18px;
-            }
-            
-            .logo-img {
-                width: 80px;
-                height: 80px;
-            }
-        }
+
     </style>
 </head>
 <body>
     <div class="login-container">
+
         <div class="logo-container">
-            <!-- School Logo -->
-            <img src="{{ url_for('static', filename=school_info.logo) }}" alt="{{ school_info.name }}" class="logo-img" onerror="this.style.display='none'">
-            
+            <!-- USE LOGO2 HERE -->
+            <img src="{{ url_for('static', filename='logo2.png') }}" class="logo-img">
+
             <h1>{{ school_info.name }}</h1>
             <p>School Management System</p>
         </div>
-        
-        <!-- Contact Information -->
+
+        <!-- FIXED CONTACT DETAILS -->
         <div class="contact-info">
-            <p><strong>📍 Address:</strong> {{ school_info.address }}</p>
-            <p><strong>📞 Phone:</strong> {{ school_info.phone1 }}, {{ school_info.phone2 }}</p>
+            <p><strong>📍 Address:</strong> Olosan Road, Alakia, Ibadan</p>
+            <p><strong>📞 Phone:</strong> 08033269042, 08138044735</p>
         </div>
-        
+
         {% if error %}
-        <div class="error">
-            <strong>⚠️ Login Failed</strong>
-            {{ error }}
-        </div>
+        <div class="error"><strong>⚠️ Login Failed</strong><br>{{ error }}</div>
         {% endif %}
-        
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="error">
-                        <strong>⚠️ {{ category|title }}</strong>
-                        {{ message }}
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-        
+
         <form method="POST" action="{{ url_for('login') }}">
+
             <div class="form-group">
-                <label for="username">👤 Username</label>
-                <input type="text" 
-                       id="username" 
-                       name="username" 
-                       placeholder="Enter your username" 
-                       required 
-                       autofocus>
+                <label>👤 Username</label>
+                <input type="text" name="username" required autofocus>
             </div>
-            
+
             <div class="form-group">
-                <label for="password">🔒 Password</label>
-                <input type="password" 
-                       id="password" 
-                       name="password" 
-                       placeholder="Enter your password" 
-                       required>
+                <label>🔒 Password</label>
+                <input type="password" name="password" required>
             </div>
-            
-            <button type="submit" class="btn-login">
-                Login to Dashboard
-            </button>
+
+            <button class="btn-login">Login to Dashboard</button>
         </form>
-        
+
         <div class="info-box">
             <strong>🔐 Default Credentials:</strong>
             <p><strong>Username:</strong> admin</p>
             <p><strong>Password:</strong> password123</p>
         </div>
-        
+
         <div class="footer">
             <p>{{ school_info.motto }}</p>
-            <p style="margin-top: 10px; font-size: 11px; color: #999;">
-                © 2024 {{ school_info.name }}
-            </p>
+            <p style="font-size:11px;color:#999;">© 2025 {{ school_info.name }}</p>
         </div>
     </div>
 </body>

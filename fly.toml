@@ -1,0 +1,25 @@
+# You will generate most of this file by running 'fly launch'
+# The [mounts] section is what enables persistent storage for SQLite.
+
+app = "your-app-name" # Fly.io will replace this with the name you choose
+primary_region = "lhr" # Change to a region close to you
+
+[build]
+  builder = "paketobuildpacks/builder:base"
+
+# --- REMOVED FOR SUPABASE POSTGRESQL ---
+# [mounts]
+#   source="data_storage"
+#   destination="/data"
+# --- END OF REMOVAL ---
+
+[env]
+  PORT = "8080" # Standard port for Fly.io
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]

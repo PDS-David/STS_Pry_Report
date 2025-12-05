@@ -1,26 +1,14 @@
-# Python
+# Python files
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-env/
+*.pyc
+
+# Virtual Environment
 venv/
-ENV/
+.venv/
+env/
 
-# Database
-*.db
-instance/
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Environment variables
+# Local development files and secrets
 .env
+*.sqlite
+instance/

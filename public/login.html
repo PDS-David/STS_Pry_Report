@@ -57,7 +57,7 @@
         }
         
         .logo-container h1 {
-            font-size: 22px;
+            font-size: 20px;
             color: #333;
             margin-bottom: 5px;
             line-height: 1.4;
@@ -67,6 +67,17 @@
             color: #666;
             font-size: 13px;
             margin-top: 10px;
+        }
+        
+        .motto {
+            text-align: center;
+            font-style: italic;
+            color: #667eea;
+            font-size: 14px;
+            margin: 15px 0;
+            padding: 10px;
+            background: #f7fafc;
+            border-radius: 8px;
         }
         
         .contact-info {
@@ -217,6 +228,11 @@
             <p>School Management System</p>
         </div>
         
+        <!-- School Motto -->
+        <div class="motto">
+            {{ school_info.motto }}
+        </div>
+        
         <!-- Contact Information -->
         <div class="contact-info">
             <p><strong>📍 Address:</strong> {{ school_info.address }}</p>
@@ -273,7 +289,6 @@
         </div>
         
         <div class="footer">
-            <p>{{ school_info.motto }}</p>
             <p style="margin-top: 10px; font-size: 11px; color: #999;">
                 © 2024 {{ school_info.name }}
             </p>

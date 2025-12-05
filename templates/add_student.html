@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add Student - SOW THE SEED</title>
+    <title>Add Student - {{ school_info.name }}</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
@@ -149,20 +149,24 @@
                 <input type="text" 
                        id="admission_number" 
                        name="admission_number" 
-                       placeholder="e.g., STD001" 
+                       placeholder="e.g., PRI001" 
                        required>
             </div>
             
             <div class="form-group">
-                <label for="student_class">Class *</label>
+                <label for="student_class">Grade *</label>
                 <select id="student_class" name="student_class" required>
-                    <option value="">-- Select Class --</option>
-                    <option value="JSS1">JSS1</option>
-                    <option value="JSS2">JSS2</option>
-                    <option value="JSS3">JSS3</option>
-                    <option value="SS1">SS1</option>
-                    <option value="SS2">SS2</option>
-                    <option value="SS3">SS3</option>
+                    <option value="">-- Select Grade --</option>
+                    <option value="Nursery 1">Nursery 1</option>
+                    <option value="Nursery 2">Nursery 2</option>
+                    <option value="KG 1">KG 1</option>
+                    <option value="KG 2">KG 2</option>
+                    <option value="Grade 1">Grade 1</option>
+                    <option value="Grade 2">Grade 2</option>
+                    <option value="Grade 3">Grade 3</option>
+                    <option value="Grade 4">Grade 4</option>
+                    <option value="Grade 5">Grade 5</option>
+                    <option value="Grade 6">Grade 6</option>
                 </select>
             </div>
             
