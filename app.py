@@ -1,13 +1,35 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
-import sqlite3
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import text, func, UniqueConstraint
 from datetime import datetime
 import os
+import re
 
 app = Flask(__name__)
-app.secret_key = "stss_secret_key_2025_change_this_in_production"
 
-# Database configuration
-DATABASE = 'school.db'
+# =================================================================
+# 🔑 CRITICAL DATABASE CONFIGURATION FOR POSTGRESQL/RENDER
+# =================================================================
+
+# 1. Get the DATABASE_URL from Render's environment variables.
+# 2. Fall back to a local SQLite path for local development.
+database_url = os.environ.get("DATABASE_URL", "sqlite:///school.db")
+
+# Render-specific fix: SQLAlchemy expects 'postgresql://' but Render might provide 'postgres://'
+if database_url and database_url.startswith("postgres://"):
+    database_url = database_url.replace("postgres://", "postgresql://", 1)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+
+# Use os.environ.get for SECRET_KEY as well (BEST PRACTICE)
+app.config['SECRET_KEY'] = os.environ.get(
+    "SECRET_KEY", 
+    "stss_secret_key_2025_change_this_in_production"
+)
+
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db = SQLAlchemy(app)
 
 # Score limits - UPDATED
 MAX_CA1 = 20
@@ -24,128 +46,88 @@ SCHOOL_INFO = {
     'logo': 'logo.png'  # Place your logo in static/logo.png
 }
 
-# ============ DATABASE FUNCTIONS ============
+# ============ DATABASE MODELS (SQLAlchemy) ============
 
-def get_db():
-    """Create database connection"""
-    db = sqlite3.connect(DATABASE)
-    db.row_factory = sqlite3.Row
-    return db
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.Text, unique=True, nullable=False)
+    password = db.Column(db.Text, nullable=False)
+
+class Student(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.Text, nullable=False)
+    admission_number = db.Column(db.Text, unique=True)
+    student_class = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    scores = db.relationship('Score', backref='student', lazy=True, cascade="all, delete-orphan")
+
+class Subject(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.Text, nullable=False)
+    code = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    scores = db.relationship('Score', backref='subject', lazy=True, cascade="all, delete-orphan")
+
+class Term(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.Text, nullable=False)
+    academic_year = db.Column(db.Text, nullable=False)
+    is_current = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    scores = db.relationship('Score', backref='term', lazy=True, cascade="all, delete-orphan")
+
+class Score(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey('student.id'), nullable=False)
+    subject_id = db.Column(db.Integer, db.ForeignKey('subject.id'), nullable=False)
+    term_id = db.Column(db.Integer, db.ForeignKey('term.id'), nullable=False)
+    ca1 = db.Column(db.Float, default=0)
+    ca2 = db.Column(db.Float, default=0)
+    exam = db.Column(db.Float, default=0)
+    total = db.Column(db.Float, default=0)
+    remark = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    __table_args__ = (
+        UniqueConstraint('student_id', 'subject_id', 'term_id', name='_student_subject_term_uc'),
+    )
+
+# ============ DATABASE UTILITY FUNCTIONS ============
 
 def init_db():
-    """Initialize database with tables"""
-    db = get_db()
-    cursor = db.cursor()
-    
-    # Students table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS students (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            admission_number TEXT UNIQUE,
-            student_class TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    
-    # Subjects table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS subjects (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            code TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    
-    # Terms table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS terms (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            academic_year TEXT NOT NULL,
-            is_current BOOLEAN DEFAULT 0,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    
-    # Scores table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS scores (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            student_id INTEGER NOT NULL,
-            subject_id INTEGER NOT NULL,
-            term_id INTEGER NOT NULL,
-            ca1 REAL DEFAULT 0,
-            ca2 REAL DEFAULT 0,
-            exam REAL DEFAULT 0,
-            total REAL DEFAULT 0,
-            remark TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (student_id) REFERENCES students(id),
-            FOREIGN KEY (subject_id) REFERENCES subjects(id),
-            FOREIGN KEY (term_id) REFERENCES terms(id),
-            UNIQUE(student_id, subject_id, term_id)
-        )
-    ''')
-    
-    # Users table for login
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL
-        )
-    ''')
-    
+    """Initialize database with tables and default data (SQLAlchemy)"""
+    # Create all tables defined by the models
+    db.create_all()
+
     # Insert default admin user
-    cursor.execute('''
-        INSERT OR IGNORE INTO users (username, password) 
-        VALUES ('admin', 'password123')
-    ''')
-    
+    if not User.query.filter_by(username='admin').first():
+        db.session.add(User(username='admin', password='password123'))
+        db.session.commit()
+
     # Insert default term if none exists
-    cursor.execute('SELECT COUNT(*) as count FROM terms')
-    if cursor.fetchone()['count'] == 0:
-        cursor.execute('''
-            INSERT INTO terms (name, academic_year, is_current) 
-            VALUES ('First Term', '2024/2025', 1)
-        ''')
-    
-    db.commit()
-    db.close()
+    if not Term.query.first():
+        db.session.add(Term(name='First Term', academic_year='2024/2025', is_current=True))
+        db.session.commit()
 
 def get_students():
     """Get all students"""
-    db = get_db()
-    students = db.execute('SELECT * FROM students ORDER BY name').fetchall()
-    db.close()
-    return students
+    return Student.query.order_by(Student.name).all()
 
 def get_classes():
     """Get list of unique classes"""
-    db = get_db()
-    classes = db.execute('''
-        SELECT DISTINCT student_class 
-        FROM students 
-        ORDER BY student_class
-    ''').fetchall()
-    db.close()
-    return [c['student_class'] for c in classes]
+    # Use SQLAlchemy's distinct function
+    return [c[0] for c in db.session.query(Student.student_class).distinct().order_by(Student.student_class).all()]
 
 def get_current_term():
     """Get the current active term"""
-    db = get_db()
-    term = db.execute('SELECT * FROM terms WHERE is_current = 1 LIMIT 1').fetchone()
-    db.close()
-    return term
+    return Term.query.filter_by(is_current=True).first()
 
 def get_subjects():
     """Get all subjects"""
-    db = get_db()
-    subjects = db.execute('SELECT * FROM subjects ORDER BY name').fetchall()
-    db.close()
-    return subjects
+    return Subject.query.order_by(Subject.name).all()
 
 def calculate_grade(total):
     """Calculate grade based on total score"""
@@ -190,16 +172,12 @@ def login():
         username = request.form.get('username')
         password = request.form.get('password')
         
-        db = get_db()
-        user = db.execute(
-            'SELECT * FROM users WHERE username = ? AND password = ?',
-            (username, password)
-        ).fetchone()
-        db.close()
+        # Use SQLAlchemy ORM to check credentials
+        user = User.query.filter_by(username=username, password=password).first()
         
         if user:
             session['username'] = username
-            session['user_id'] = user['id']
+            session['user_id'] = user.id
             flash('Login successful!', 'success')
             return redirect(url_for('dashboard'))
         else:
@@ -241,18 +219,16 @@ def add_student():
         admission_number = request.form.get('admission_number')
         student_class = request.form.get('student_class')
         
+        new_student = Student(name=name, admission_number=admission_number, student_class=student_class)
+        db.session.add(new_student)
+        
         try:
-            db = get_db()
-            db.execute(
-                'INSERT INTO students (name, admission_number, student_class) VALUES (?, ?, ?)',
-                (name, admission_number, student_class)
-            )
-            db.commit()
-            db.close()
+            db.session.commit()
             flash(f'Student {name} added successfully!', 'success')
             return redirect(url_for('dashboard'))
-        except sqlite3.IntegrityError:
-            flash('Admission number already exists!', 'error')
+        except Exception:
+            db.session.rollback()
+            flash('Admission number already exists! Please use a unique number.', 'error')
     
     return render_template('add_student.html', school_info=SCHOOL_INFO)
 
@@ -262,24 +238,16 @@ def edit_student(student_id):
     if 'username' not in session:
         return redirect(url_for('login'))
     
-    db = get_db()
+    student = Student.query.get_or_404(student_id)
     
     if request.method == 'POST':
-        name = request.form.get('name')
-        admission_number = request.form.get('admission_number')
-        student_class = request.form.get('student_class')
+        student.name = request.form.get('name')
+        student.admission_number = request.form.get('admission_number')
+        student.student_class = request.form.get('student_class')
         
-        db.execute(
-            'UPDATE students SET name = ?, admission_number = ?, student_class = ? WHERE id = ?',
-            (name, admission_number, student_class, student_id)
-        )
-        db.commit()
-        db.close()
+        db.session.commit()
         flash('Student updated successfully!', 'success')
         return redirect(url_for('dashboard'))
-    
-    student = db.execute('SELECT * FROM students WHERE id = ?', (student_id,)).fetchone()
-    db.close()
     
     return render_template('edit_student.html', student=student, school_info=SCHOOL_INFO)
 
@@ -289,11 +257,11 @@ def delete_student(student_id):
     if 'username' not in session:
         return redirect(url_for('login'))
     
-    db = get_db()
-    db.execute('DELETE FROM students WHERE id = ?', (student_id,))
-    db.execute('DELETE FROM scores WHERE student_id = ?', (student_id,))
-    db.commit()
-    db.close()
+    student = Student.query.get_or_404(student_id)
+    
+    # SQLAlchemy cascades delete to scores automatically (due to 'cascade="all, delete-orphan"' in model)
+    db.session.delete(student)
+    db.session.commit()
     
     flash('Student deleted successfully!', 'success')
     return redirect(url_for('dashboard'))
@@ -304,43 +272,60 @@ def score_entry():
     if 'username' not in session:
         return redirect(url_for('login'))
     
-    if request.method == 'POST':
-        student_id = request.form.get('student_id')
-        subject_id = request.form.get('subject_id')
-        ca1 = float(request.form.get('ca1', 0))
-        ca2 = float(request.form.get('ca2', 0))
-        exam = float(request.form.get('exam', 0))
-        remark = request.form.get('remark', '')
-        
-        # Validate scores
-        if ca1 > MAX_CA1 or ca2 > MAX_CA2 or exam > MAX_EXAM:
-            flash('Score exceeds maximum allowed!', 'error')
-            return redirect(url_for('score_entry'))
-        
-        total = ca1 + ca2 + exam
-        current_term = get_current_term()
-        
-        if not current_term:
-            flash('No active term! Please create a term first.', 'error')
-            return redirect(url_for('score_entry'))
-        
-        try:
-            db = get_db()
-            db.execute('''
-                INSERT OR REPLACE INTO scores 
-                (student_id, subject_id, term_id, ca1, ca2, exam, total, remark)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (student_id, subject_id, current_term['id'], ca1, ca2, exam, total, remark))
-            db.commit()
-            db.close()
-            flash('Score saved successfully!', 'success')
-        except Exception as e:
-            flash(f'Error saving score: {str(e)}', 'error')
-    
     students = get_students()
     subjects = get_subjects()
     current_term = get_current_term()
+
+    if not current_term:
+        flash('No active term! Please create a term first.', 'error')
+        return redirect(url_for('dashboard'))
     
+    if request.method == 'POST':
+        try:
+            student_id = int(request.form.get('student_id'))
+            subject_id = int(request.form.get('subject_id'))
+            ca1 = float(request.form.get('ca1', 0))
+            ca2 = float(request.form.get('ca2', 0))
+            exam = float(request.form.get('exam', 0))
+            remark = request.form.get('remark', '')
+            
+            # Validate scores
+            if ca1 > MAX_CA1 or ca2 > MAX_CA2 or exam > MAX_EXAM:
+                flash('Score exceeds maximum allowed!', 'error')
+                return redirect(url_for('score_entry'))
+            
+            total = ca1 + ca2 + exam
+            
+            # Check if score exists (for INSERT OR REPLACE logic)
+            score_record = Score.query.filter_by(
+                student_id=student_id, 
+                subject_id=subject_id, 
+                term_id=current_term.id
+            ).first()
+            
+            if score_record:
+                # Update existing record
+                score_record.ca1 = ca1
+                score_record.ca2 = ca2
+                score_record.exam = exam
+                score_record.total = total
+                score_record.remark = remark
+            else:
+                # Create new record
+                new_score = Score(
+                    student_id=student_id, 
+                    subject_id=subject_id, 
+                    term_id=current_term.id,
+                    ca1=ca1, ca2=ca2, exam=exam, total=total, remark=remark
+                )
+                db.session.add(new_score)
+                
+            db.session.commit()
+            flash('Score saved successfully!', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error saving score: {str(e)}', 'error')
+            
     return render_template('score_entry.html',
                          students=students,
                          subjects=subjects,
@@ -356,88 +341,86 @@ def student_report(student_id):
     if 'username' not in session:
         return redirect(url_for('login'))
     
-    db = get_db()
-    student = db.execute('SELECT * FROM students WHERE id = ?', (student_id,)).fetchone()
+    student = Student.query.get_or_404(student_id)
     current_term = get_current_term()
     
     if not current_term:
         flash('No active term!', 'error')
         return redirect(url_for('dashboard'))
     
-    # Get student scores
-    scores = db.execute('''
-        SELECT s.*, sub.name as subject
-        FROM scores s
-        JOIN subjects sub ON s.subject_id = sub.id
-        WHERE s.student_id = ? AND s.term_id = ?
-        ORDER BY sub.name
-    ''', (student_id, current_term['id'])).fetchall()
+    # Get student scores and subject name (using ORM JOIN)
+    scores_query = db.session.query(
+        Score, 
+        Subject.name.label('subject_name')
+    ).join(Subject).filter(
+        Score.student_id == student_id, 
+        Score.term_id == current_term.id
+    ).order_by(Subject.name).all()
     
     report_data = []
     total_score = 0
     
-    for score in scores:
-        grade = calculate_grade(score['total'])
+    # Step 1: Pre-fetch all class totals for position calculation efficiency
+    # This query sums the total score for every student in the current student's class and term
+    class_totals_query = db.session.query(
+        Student.id, 
+        func.sum(Score.total).label('total')
+    ).join(Score).filter(
+        Student.student_class == student.student_class,
+        Score.term_id == current_term.id
+    ).group_by(Student.id).all()
+    
+    all_student_totals = {row.id: row.total for row in class_totals_query}
+    
+    # Step 2: Iterate through scores to build report data
+    for score_obj, subject_name in scores_query:
+        total_score += score_obj.total
+        grade = calculate_grade(score_obj.total)
         
-        # Get class statistics
-        class_scores = db.execute('''
-            SELECT s.total
-            FROM scores s
-            JOIN students st ON s.student_id = st.id
-            WHERE s.subject_id = ? AND s.term_id = ? AND st.student_class = ?
-        ''', (score['subject_id'], current_term['id'], student['student_class'])).fetchall()
+        # Get class statistics for the SPECIFIC SUBJECT
+        class_scores_for_subject = db.session.query(Score.total).join(Student).filter(
+            Score.subject_id == score_obj.subject_id, 
+            Score.term_id == current_term.id, 
+            Student.student_class == student.student_class
+        ).all()
         
-        totals = [s['total'] for s in class_scores]
+        totals = [s[0] for s in class_scores_for_subject]
         class_highest = max(totals) if totals else 0
         class_average = sum(totals) / len(totals) if totals else 0
         
-        # Calculate position
-        position = sum(1 for t in totals if t > score['total']) + 1
+        # Calculate subject position: count how many students in the class scored higher
+        subject_position = sum(1 for t in totals if t > score_obj.total) + 1
         
         report_data.append({
-            'subject': score['subject'],
-            'ca1': score['ca1'],
-            'ca2': score['ca2'],
-            'exam': score['exam'],
-            'total': score['total'],
+            'subject': subject_name,
+            'ca1': score_obj.ca1,
+            'ca2': score_obj.ca2,
+            'exam': score_obj.exam,
+            'total': score_obj.total,
             'grade': grade,
-            'position': position,
+            'position': subject_position,
             'class_highest': class_highest,
             'class_average': f"{class_average:.1f}",
             'remark': get_remark(grade)
         })
-        
-        total_score += score['total']
     
-    # Calculate overall statistics
-    num_subjects = len(scores)
+    # Step 3: Calculate overall statistics
+    num_subjects = len(scores_query)
     average = total_score / num_subjects if num_subjects > 0 else 0
     
     # Get total students in class
-    total_students = db.execute('''
-        SELECT COUNT(DISTINCT id) as count 
-        FROM students 
-        WHERE student_class = ?
-    ''', (student['student_class'],)).fetchone()['count']
+    total_students = Student.query.filter_by(student_class=student.student_class).count()
     
-    # Calculate overall position
-    all_totals = db.execute('''
-        SELECT st.id, SUM(s.total) as total
-        FROM scores s
-        JOIN students st ON s.student_id = st.id
-        WHERE s.term_id = ? AND st.student_class = ?
-        GROUP BY st.id
-    ''', (current_term['id'], student['student_class'])).fetchall()
+    # Calculate overall position: count how many students had a higher overall total
+    student_total_score = all_student_totals.get(student.id, 0)
     
-    position = sum(1 for t in all_totals if t['total'] > total_score) + 1
-    
+    overall_position = sum(1 for total in all_student_totals.values() if total > student_total_score) + 1
+
     student_stats = {
         'total': total_score,
         'average': average,
-        'position': position
+        'position': overall_position
     }
-    
-    db.close()
     
     return render_template('report.html',
                          student=student,
@@ -453,29 +436,30 @@ def class_summary():
     if 'username' not in session:
         return redirect(url_for('login'))
     
-    db = get_db()
     current_term = get_current_term()
     classes = get_classes()
-    
     summary_data = {}
     
+    if not current_term:
+        flash('No active term!', 'error')
+        return redirect(url_for('dashboard'))
+
     for class_name in classes:
         # Get students in class
-        students = db.execute('''
-            SELECT * FROM students WHERE student_class = ?
-        ''', (class_name,)).fetchall()
+        students_in_class = Student.query.filter_by(student_class=class_name).all()
+        total_students = len(students_in_class)
+
+        # Get total scores for each student in the current term
+        student_totals_query = db.session.query(
+            Student.name, 
+            func.sum(Score.total).label('total')
+        ).join(Score).filter(
+            Student.student_class == class_name,
+            Score.term_id == current_term.id
+        ).group_by(Student.name).all()
         
-        # Get total scores for each student
-        student_totals = []
-        for student in students:
-            total = db.execute('''
-                SELECT SUM(total) as total
-                FROM scores
-                WHERE student_id = ? AND term_id = ?
-            ''', (student['id'], current_term['id'])).fetchone()
-            
-            if total['total']:
-                student_totals.append((student['name'], total['total']))
+        # Convert results to list of (name, total) tuples
+        student_totals = [(row.name, row.total) for row in student_totals_query if row.total is not None]
         
         # Sort and get top 3
         student_totals.sort(key=lambda x: x[1], reverse=True)
@@ -486,12 +470,10 @@ def class_summary():
         class_average = sum(totals) / len(totals) if totals else 0
         
         summary_data[class_name] = {
-            'total_students': len(students),
+            'total_students': total_students,
             'class_average': class_average,
             'top_students': top_students
         }
-    
-    db.close()
     
     return render_template('class_summary.html',
                          summary_data=summary_data,
@@ -507,10 +489,9 @@ def subjects():
         name = request.form.get('name')
         code = request.form.get('code', '')
         
-        db = get_db()
-        db.execute('INSERT INTO subjects (name, code) VALUES (?, ?)', (name, code))
-        db.commit()
-        db.close()
+        new_subject = Subject(name=name, code=code)
+        db.session.add(new_subject)
+        db.session.commit()
         flash('Subject added successfully!', 'success')
         return redirect(url_for('subjects'))
     
@@ -531,26 +512,20 @@ def terms():
     if request.method == 'POST':
         name = request.form.get('name')
         academic_year = request.form.get('academic_year')
-        is_current = 1 if request.form.get('is_current') else 0
-        
-        db = get_db()
+        is_current = request.form.get('is_current') == 'on' # Checkbox value is 'on'
         
         # If setting as current, unset all others
         if is_current:
-            db.execute('UPDATE terms SET is_current = 0')
+            Term.query.update({Term.is_current: False})
         
-        db.execute(
-            'INSERT INTO terms (name, academic_year, is_current) VALUES (?, ?, ?)',
-            (name, academic_year, is_current)
-        )
-        db.commit()
-        db.close()
+        new_term = Term(name=name, academic_year=academic_year, is_current=is_current)
+        db.session.add(new_term)
+        db.session.commit()
+        
         flash('Term added successfully!', 'success')
         return redirect(url_for('terms'))
     
-    db = get_db()
-    all_terms = db.execute('SELECT * FROM terms ORDER BY id DESC').fetchall()
-    db.close()
+    all_terms = Term.query.order_by(Term.id.desc()).all()
     
     return render_template('terms.html', terms=all_terms)
 
@@ -562,12 +537,19 @@ def manage_terms():
 # ============ INITIALIZE AND RUN ============
 
 if __name__ == '__main__':
-    # Initialize database on first run
-    if not os.path.exists(DATABASE):
-        print("Creating database...")
-        init_db()
-        print("Database created successfully!")
-    
+    # Initialize database within the application context
+    # This is required for SQLAlchemy to know which app it's configuring
+    with app.app_context():
+        # Check if any tables exist (e.g., the User table)
+        # This prevents accidental database creation on every run
+        try:
+            db.session.query(User).first()
+            print("Database tables already exist. Skipping creation.")
+        except:
+            print("Creating database tables...")
+            init_db()
+            print("Database created successfully!")
+            
     print("=" * 70)
     print("SOW THE SEED NURSERY & PRIMARY SCHOOL - Management System")
     print("=" * 70)
