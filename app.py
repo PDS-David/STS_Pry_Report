@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash, send_file
+from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
@@ -9,9 +9,15 @@ from functools import wraps
 app = Flask(__name__, static_folder='public', template_folder='public')
 app.secret_key = os.environ.get('SECRET_KEY', 'supersecretkey123')
 
-# Production-ready database configuration
-DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///school.db')
-# Fix for Render.com PostgreSQL URL format
+# Vercel-compatible database configuration
+# Using SQLite with absolute path for Vercel
+DATABASE_URL = os.environ.get('DATABASE_URL')
+if not DATABASE_URL:
+    # Use /tmp directory for serverless environments
+    db_path = os.path.join('/tmp', 'school.db')
+    DATABASE_URL = f'sqlite:///{db_path}'
+
+# Fix for PostgreSQL URL format if using external DB
 if DATABASE_URL.startswith('postgres://'):
     DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
 
@@ -23,7 +29,7 @@ db = SQLAlchemy(app)
 # School Information - Centralized Configuration
 SCHOOL_INFO = {
     'name': 'SOW THE SEED Model College',
-    'logo': 'logo1.png',  # Place logo1.png in the 'public' folder
+    'logo': 'logo1.png',
     'address': 'Olosan Road, Alakia',
     'phone1': '08033269042',
     'phone2': '08138044735',
@@ -136,6 +142,37 @@ def calculate_class_statistics(student_class, term_id):
         stats[student_id]['position'] = position
     
     return stats
+
+
+# Initialize database on first request (Vercel serverless)
+@app.before_request
+def init_db():
+    """Initialize database with sample data on first request"""
+    if not hasattr(app, 'db_initialized'):
+        with app.app_context():
+            db.create_all()
+            
+            if not User.query.filter_by(username='admin').first():
+                admin = User(username='admin', role='admin')
+                admin.set_password('password123')
+                db.session.add(admin)
+            
+            default_subjects = ['Mathematics', 'English', 'Science', 'Social Studies']
+            for subject_name in default_subjects:
+                if not Subject.query.filter_by(name=subject_name).first():
+                    subject = Subject(name=subject_name, code=subject_name[:3].upper())
+                    db.session.add(subject)
+            
+            if not Term.query.first():
+                term = Term(
+                    name='First Term',
+                    academic_year='2024/2025',
+                    is_current=True
+                )
+                db.session.add(term)
+            
+            db.session.commit()
+            app.db_initialized = True
 
 
 # Context processor to make SCHOOL_INFO available to all templates
@@ -430,50 +467,7 @@ def manage_terms():
     return render_template('terms.html', terms=terms)
 
 
-# ============ DATABASE INITIALIZATION ============
-
-def init_db():
-    """Initialize database with sample data"""
-    with app.app_context():
-        db.create_all()
-        
-        if not User.query.filter_by(username='admin').first():
-            admin = User(username='admin', role='admin')
-            admin.set_password('password123')
-            db.session.add(admin)
-        
-        default_subjects = ['Mathematics', 'English', 'Science', 'Social Studies']
-        for subject_name in default_subjects:
-            if not Subject.query.filter_by(name=subject_name).first():
-                subject = Subject(name=subject_name, code=subject_name[:3].upper())
-                db.session.add(subject)
-        
-        if not Term.query.first():
-            term = Term(
-                name='First Term',
-                academic_year='2024/2025',
-                is_current=True
-            )
-            db.session.add(term)
-        
-        db.session.commit()
-        print("✅ Database initialized successfully!")
-
-
-# ============ MAIN ============
-
+# For local development
 if __name__ == '__main__':
-    init_db()
     port = int(os.environ.get('PORT', 5000))
-    debug_mode = os.environ.get('FLASK_ENV') != 'production'
-    
-    print("="*60)
-    print("🚀 SOW THE SEED School Management System")
-    print("="*60)
-    print(f"📡 Server starting on port {port}")
-    print("👤 Default login: admin / password123")
-    print(f"⚙️  Debug mode: {'ON' if debug_mode else 'OFF'}")
-    print(f"🗄️  Database: {DATABASE_URL.split('@')[0]}...")  # Hide sensitive DB info
-    print("="*60)
-    
-    app.run(host='0.0.0.0', port=port, debug=debug_mode)
+    app.run(host='0.0.0.0', port=port, debug=True)
