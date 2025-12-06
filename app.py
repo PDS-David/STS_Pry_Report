@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash, send_file
+from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import func, UniqueConstraint
 from datetime import datetime
@@ -40,19 +40,19 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-# Score limits - UPDATED
+# Score limits
 MAX_CA1 = 20
 MAX_CA2 = 20
 MAX_EXAM = 60
 
-# School Information - UPDATED
+# School Information
 SCHOOL_INFO = {
     'name': 'SOW THE SEED NURSERY & PRIMARY SCHOOL',
     'motto': 'Growing in wisdom and finding favour with God and Man - Lk. 2 : 52',
     'address': 'Olosan Road, Alakia, Ibadan',
     'phone1': '08033269042',
     'phone2': '08138044735',
-    'logo': 'logo.png'  # Place your logo in static/logo.png
+    'logo': 'logo.png'
 }
 
 # ============ DATABASE MODELS (SQLAlchemy) ============
@@ -111,6 +111,7 @@ def init_db():
     try:
         # Create all tables defined by the models
         db.create_all()
+        print("✅ Database tables created")
 
         # Insert default admin user
         if not User.query.filter_by(username='admin').first():
@@ -135,7 +136,6 @@ def get_students():
 
 def get_classes():
     """Get list of unique classes"""
-    # Use SQLAlchemy's distinct function
     return [c[0] for c in db.session.query(Student.student_class).distinct().order_by(Student.student_class).all()]
 
 def get_current_term():
@@ -189,7 +189,6 @@ def login():
         username = request.form.get('username')
         password = request.form.get('password')
         
-        # Use SQLAlchemy ORM to check credentials
         user = User.query.filter_by(username=username, password=password).first()
         
         if user:
@@ -277,7 +276,6 @@ def delete_student(student_id):
     
     student = Student.query.get_or_404(student_id)
     
-    # SQLAlchemy cascades delete to scores automatically (due to 'cascade="all, delete-orphan"' in model)
     db.session.delete(student)
     db.session.commit()
     
@@ -307,14 +305,12 @@ def score_entry():
             exam = float(request.form.get('exam', 0))
             remark = request.form.get('remark', '')
             
-            # Validate scores
             if ca1 > MAX_CA1 or ca2 > MAX_CA2 or exam > MAX_EXAM:
                 flash('Score exceeds maximum allowed!', 'error')
                 return redirect(url_for('score_entry'))
             
             total = ca1 + ca2 + exam
             
-            # Check if score exists (for INSERT OR REPLACE logic)
             score_record = Score.query.filter_by(
                 student_id=student_id, 
                 subject_id=subject_id, 
@@ -322,14 +318,12 @@ def score_entry():
             ).first()
             
             if score_record:
-                # Update existing record
                 score_record.ca1 = ca1
                 score_record.ca2 = ca2
                 score_record.exam = exam
                 score_record.total = total
                 score_record.remark = remark
             else:
-                # Create new record
                 new_score = Score(
                     student_id=student_id, 
                     subject_id=subject_id, 
@@ -366,7 +360,6 @@ def student_report(student_id):
         flash('No active term!', 'error')
         return redirect(url_for('dashboard'))
     
-    # Get student scores and subject name (using ORM JOIN)
     scores_query = db.session.query(
         Score, 
         Subject.name.label('subject_name')
@@ -378,7 +371,6 @@ def student_report(student_id):
     report_data = []
     total_score = 0
     
-    # Step 1: Pre-fetch all class totals for position calculation efficiency
     class_totals_query = db.session.query(
         Student.id, 
         func.sum(Score.total).label('total')
@@ -389,12 +381,10 @@ def student_report(student_id):
     
     all_student_totals = {row.id: row.total for row in class_totals_query}
     
-    # Step 2: Iterate through scores to build report data
     for score_obj, subject_name in scores_query:
         total_score += score_obj.total
         grade = calculate_grade(score_obj.total)
         
-        # Get class statistics for the SPECIFIC SUBJECT
         class_scores_for_subject = db.session.query(Score.total).join(Student).filter(
             Score.subject_id == score_obj.subject_id, 
             Score.term_id == current_term.id, 
@@ -405,7 +395,6 @@ def student_report(student_id):
         class_highest = max(totals) if totals else 0
         class_average = sum(totals) / len(totals) if totals else 0
         
-        # Calculate subject position
         subject_position = sum(1 for t in totals if t > score_obj.total) + 1
         
         report_data.append({
@@ -421,14 +410,11 @@ def student_report(student_id):
             'remark': get_remark(grade)
         })
     
-    # Step 3: Calculate overall statistics
     num_subjects = len(scores_query)
     average = total_score / num_subjects if num_subjects > 0 else 0
     
-    # Get total students in class
     total_students = Student.query.filter_by(student_class=student.student_class).count()
     
-    # Calculate overall position
     student_total_score = all_student_totals.get(student.id, 0)
     overall_position = sum(1 for total in all_student_totals.values() if total > student_total_score) + 1
 
@@ -525,7 +511,6 @@ def terms():
         academic_year = request.form.get('academic_year')
         is_current = request.form.get('is_current') == 'on'
         
-        # If setting as current, unset all others
         if is_current:
             Term.query.update({Term.is_current: False})
         
@@ -550,13 +535,12 @@ def manage_terms():
 with app.app_context():
     try:
         # Try to query the database to check connectivity
-        db.session.query(User).first()
+        User.query.first()
         print("✅ Database connection successful")
     except Exception as e:
-        print(f"⚠️ Database not initialized, creating tables... Error: {e}")
+        print(f"⚠️ Database not initialized, creating tables...")
         # If anything goes wrong (no tables), create them and seed minimum data
         init_db()
 
 if __name__ == '__main__':
-    # Local dev only
     app.run(debug=True, host='0.0.0.0', port=5000)
