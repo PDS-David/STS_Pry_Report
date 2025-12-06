@@ -1,14 +1,3 @@
-# Python files
+school.db
 __pycache__/
 *.pyc
-
-# Virtual Environment
-venv/
-.venv/
-env/
-
-
-# Local development files and secrets
-.env
-*.sqlite
-instance/

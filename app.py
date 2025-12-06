@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import text, func, UniqueConstraint
+from sqlalchemy import func, UniqueConstraint
 from datetime import datetime
 import os
 import re
@@ -23,7 +23,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 
 # Use os.environ.get for SECRET_KEY as well (BEST PRACTICE)
 app.config['SECRET_KEY'] = os.environ.get(
-    "SECRET_KEY", 
+    "SECRET_KEY",
     "stss_secret_key_2025_change_this_in_production"
 )
 
@@ -41,8 +41,8 @@ SCHOOL_INFO = {
     'name': 'SOW THE SEED NURSERY & PRIMARY SCHOOL',
     'motto': 'Growing in wisdom and finding favour with God and Man - Lk. 2 : 52',
     'address': 'Your School Address Here',
-    'phone1': '0123456789',
-    'phone2': '0987654321',
+    'phone1': '08033269042',
+    'phone2': '08139044735',
     'logo': 'logo.png'  # Place your logo in static/logo.png
 }
 
@@ -535,26 +535,17 @@ def manage_terms():
     return redirect(url_for('terms'))
 
 # ============ INITIALIZE AND RUN ============
+# Database initialization moved above so it runs when gunicorn imports this module
+# (this ensures the DB is ready on Render as well)
+
+with app.app_context():
+    try:
+        # Touch the User table to confirm DB connectivity / tables
+        db.session.query(User).first()
+    except Exception:
+        # If anything goes wrong (no tables), create them and seed minimum data
+        init_db()
 
 if __name__ == '__main__':
-    # Initialize database within the application context
-    # This is required for SQLAlchemy to know which app it's configuring
-    with app.app_context():
-        # Check if any tables exist (e.g., the User table)
-        # This prevents accidental database creation on every run
-        try:
-            db.session.query(User).first()
-            print("Database tables already exist. Skipping creation.")
-        except:
-            print("Creating database tables...")
-            init_db()
-            print("Database created successfully!")
-            
-    print("=" * 70)
-    print("SOW THE SEED NURSERY & PRIMARY SCHOOL - Management System")
-    print("=" * 70)
-    print("Server starting at: http://127.0.0.1:5000")
-    print("Default login: admin / password123")
-    print("=" * 70)
-    
+    # Local dev only
     app.run(debug=True)

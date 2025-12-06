@@ -1,2 +1,4 @@
-Flask-SQLAlchemy
+Flask
+gunicorn
+SQLAlchemy
 psycopg2-binary
