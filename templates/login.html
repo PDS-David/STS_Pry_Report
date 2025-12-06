@@ -97,13 +97,24 @@
             box-shadow: 0 10px 25px rgba(102,126,234,0.4);
         }
 
-        .error {
-            background: #fee;
-            color: #c33;
+        /* FIXED: Added flash message styles */
+        .flash {
             padding: 12px 15px;
             border-radius: 10px;
             margin-bottom: 20px;
-            border-left: 4px solid #c33;
+            font-size: 14px;
+        }
+
+        .flash.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border-left: 4px solid #dc2626;
+        }
+
+        .flash.success {
+            background: #d1fae5;
+            color: #065f46;
+            border-left: 4px solid #10b981;
         }
 
         .info-box {
@@ -129,22 +140,27 @@
     <div class="login-container">
 
         <div class="logo-container">
-            <!-- USE LOGO2 HERE -->
             <img src="{{ url_for('static', filename='logo2.png') }}" class="logo-img">
-
             <h1>{{ school_info.name }}</h1>
             <p>School Management System</p>
         </div>
 
-        <!-- FIXED CONTACT DETAILS -->
         <div class="contact-info">
             <p><strong>📍 Address:</strong> Olosan Road, Alakia, Ibadan</p>
             <p><strong>📞 Phone:</strong> 08033269042, 08138044735</p>
         </div>
 
-        {% if error %}
-        <div class="error"><strong>⚠️ Login Failed</strong><br>{{ error }}</div>
-        {% endif %}
+        <!-- FIXED: Added flash message handling -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash {{ category }}">
+                        <strong>{% if category == 'error' %}⚠️ Error{% else %}✓{% endif %}</strong><br>
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
 
         <form method="POST" action="{{ url_for('login') }}">
 
@@ -162,7 +178,7 @@
         </form>
 
         <div class="info-box">
-            <strong>🔐 Default Credentials:</strong>
+            <strong>📝 Default Credentials:</strong>
             <p><strong>Username:</strong> admin</p>
             <p><strong>Password:</strong> password123</p>
         </div>
